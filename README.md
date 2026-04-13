@@ -1,4 +1,4 @@
-# Prox Founding Engineer Challenge
+<!--# Prox Founding Engineer Challenge
 
 <img src="product.webp" alt="Vulcan OmniPro 220" width="400" /> <img src="product-inside.webp" alt="Vulcan OmniPro 220 — inside panel" width="400" />
 
@@ -90,3 +90,372 @@ If it takes longer than that to set up, that's a problem.
 ## What Happens Next
 
 We review submissions on a rolling basis and respond to every single one within a few days. Good luck.
+-->
+# Vulcan OmniPro 220 Multimodal Agent
+
+A **multimodal, intent-aware Retrieval-Augmented Generation (RAG) system** that answers technical questions about welding equipment using structured reasoning, hybrid search, and visual grounding.
+
+---
+
+## Overview
+
+This project builds an intelligent assistant that can:
+
+* Understand user intent (specifications, troubleshooting, setup, etc.)
+* Retrieve relevant sections from technical manuals
+* Combine keyword + vector search for accurate retrieval
+* Ground answers using both **text and images**
+* Generate structured responses (tables, steps, diagrams)
+* Optionally use an LLM (Claude) for final answer synthesis
+
+---
+
+## System Architecture
+
+The system follows a modular agent pipeline:
+
+```text
+User Query
+   ↓
+Query Router (intent + tags)
+   ↓
+Hybrid Search (keyword + vector + boosting)
+   ↓
+Response Planner (structure + chunk selection)
+   ↓
+Renderers (format-specific output)
+   ↓
+(Optional) LLM Generation (Claude)
+   ↓
+Final Answer + Visual References
+```
+
+---
+
+## Key Components
+
+### 1. Query Router
+
+* Classifies query intent:
+
+  * specification
+  * procedure
+  * troubleshooting
+  * diagram
+  * controls lookup
+  * selection guidance
+* Extracts:
+
+  * process tags (MIG, TIG, Flux-cored)
+  * voltage tags (120V, 240V)
+* Determines:
+
+  * expected output format (table, steps, etc.)
+
+---
+
+### 2. Hybrid Search
+
+Combines:
+
+* **Keyword search** (BM25-style relevance)
+* **Vector search** (semantic similarity via FAISS)
+
+Enhancements:
+
+* Intent-aware boosting
+* Tag-based boosting (process + voltage)
+
+Example:
+
+```
+"duty cycle MIG 240V"
+→ boosts:
+  - specification chunks
+  - MIG-related chunks
+  - 240V-related chunks
+```
+
+---
+
+### 3. Response Planner
+
+* Selects:
+
+  * primary chunk
+  * supporting chunks
+* Determines:
+
+  * answer style (instructional, diagnostic, etc.)
+  * output format
+* Integrates:
+
+  * visual references (images)
+
+---
+
+### 4. Vision Module
+
+* Matches extracted images to queries
+* Uses:
+
+  * captions
+  * nearby text
+  * OCR context
+* Returns:
+
+  * relevant diagrams
+  * UI panels
+  * troubleshooting visuals
+
+---
+
+### 5. Renderers
+
+Format-specific output generation:
+
+| Intent          | Renderer             |
+| --------------- | -------------------- |
+| Specification   | Table                |
+| Procedure       | Step-by-step         |
+| Troubleshooting | Image + text         |
+| Diagram         | Structured diagram   |
+| Controls        | Visual + explanation |
+
+---
+
+### 6. Orchestrator
+
+Central controller that:
+
+* connects all modules
+* manages pipeline execution
+* optionally calls Claude API
+* provides fallback responses
+
+---
+
+## Presentation Layer
+
+Built using **Streamlit**
+
+Features:
+
+* Query input + sample queries
+* Claude toggle
+* Answer-first UI
+* Evidence display
+* Visual references
+* Debug panels
+
+---
+
+## Project Structure
+
+```text
+prox-challenge/
+│
+├── app/
+│   ├── agent/
+│   │   ├── orchestrator.py        # main pipeline controller
+│   │   ├── query_router.py        # intent classification
+│   │   ├── response_planner.py    # chunk selection + structure
+│   │   ├── prompts.py             # LLM prompts
+│   │
+│   ├── ingestion/
+│   │   ├── parse_manual.py        # PDF parsing
+│   │   ├── chunk_manual.py        # chunking logic
+│   │   ├── extract_images.py      # image extraction
+│   │   ├── extract_tables.py      # table extraction
+│   │   ├── build_inventory.py     # metadata creation
+│   │
+│   ├── retrieval/
+│   │   ├── keyword_search.py      # keyword-based search
+│   │   ├── vector_store.py        # FAISS embeddings
+│   │   ├── hybrid_search.py       # combined ranking logic
+│   │   ├── metadata_filters.py
+│   │
+│   ├── vision/
+│   │   ├── figure_matcher.py      # image retrieval
+│   │   ├── image_analysis.py      # caption + enrichment
+│   │
+│   ├── renderers/
+│   │   ├── text_renderer.py
+│   │   ├── table_renderer.py
+│   │   ├── image_renderer.py
+│   │   ├── diagram_renderer.py
+│   │
+│   ├── main.py                   # Streamlit UI
+│   ├── config.py
+│   ├── schemas.py
+│
+├── data/
+│   ├── indexes/
+│   │   ├── chunks.faiss
+│   │   ├── chunks_metadata.json
+│   │
+│   ├── processed/
+│   │   ├── chunks/
+│   │   ├── images/
+│   │   ├── images_manifest.json
+│   │   ├── pages/
+│   │   ├── tables/
+│
+├── files/
+│   ├── owner-manual.pdf
+│   ├── quick-start-guide.pdf
+│   ├── selection-chart.pdf
+│
+├── tests/
+│   ├── smoke_test.py
+│   ├── eval_questions.json
+│
+├── requirements.txt
+├── README.md
+└── .env
+```
+
+---
+
+## Setup Instructions
+
+### 1. Clone repo
+
+```bash
+git clone <repo-url>
+cd prox-challenge
+```
+
+---
+
+### 2. Create virtual environment
+
+```bash
+python3 -m venv proxy
+source proxy/bin/activate
+```
+
+---
+
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+### 4. Add Claude API key
+
+Create `.env`:
+
+```text
+ANTHROPIC_API_KEY=your_api_key_here
+```
+
+---
+
+### 5. Run Streamlit app
+
+```bash
+streamlit run app/main.py
+```
+
+---
+
+## 🧪 Testing
+
+Run smoke tests:
+
+```bash
+python -m tests.smoke_test
+```
+
+---
+
+## Example Queries
+
+* `duty cycle MIG 240V`
+* `polarity setup flux cored`
+* `front panel controls`
+* `wire spool installation`
+* `welder does not function troubleshooting`
+* `which process should I use for stainless steel`
+
+---
+
+## Design Decisions
+
+### Why Hybrid Search?
+
+* Keyword ensures precision
+* Vector ensures semantic matching
+* Combined with boosting → robust ranking
+
+---
+
+### Why Intent-Aware Routing?
+
+Without intent:
+
+* wrong chunk types dominate
+* output format becomes inconsistent
+
+With intent:
+
+* stable behavior
+* predictable outputs
+
+---
+
+### Why Structured Planning?
+
+Separates:
+
+* **what to retrieve**
+* **how to answer**
+
+This makes the system:
+
+* explainable
+* debuggable
+* extensible
+
+---
+
+### Why Vision Integration?
+
+Technical manuals rely heavily on:
+
+* diagrams
+* control panels
+* wiring visuals
+
+Text-only RAG is insufficient.
+
+---
+## Result
+<img src="result.png" alt="Vulcan OmniPro 220" width="400" />
+---
+
+## Future Improvements
+
+* Better table rendering (true dataframe display)
+* More advanced image understanding (multimodal embeddings)
+* Feedback loop for ranking improvement
+* Streaming responses with Claude
+* Deployment (Docker + cloud)
+
+---
+
+## Summary
+
+This project demonstrates:
+
+* End-to-end RAG system design
+* Hybrid retrieval with ranking optimization
+* Intent-aware reasoning
+* Multimodal integration (text + images)
+* Clean separation of concerns (router, planner, renderer)
+
+---
