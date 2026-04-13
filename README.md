@@ -435,7 +435,7 @@ Text-only RAG is insufficient.
 
 ---
 ## Result
-<img src="result.png" alt="Vulcan OmniPro 220" width="400" />
+<img src="result.png" alt="Vulcan OmniPro 220" />
 ---
 
 ## Future Improvements
