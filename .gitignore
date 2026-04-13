@@ -1,0 +1,7 @@
+proxy/
+.venv/
+__pycache__/
+*.pyc
+.env
+data/processed/
+data/indexes/

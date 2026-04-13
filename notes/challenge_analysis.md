@@ -19,3 +19,11 @@ This will be a technical support agent, not generic PDF chat.
 - Query classification
 - Response planner
 - Multimodal renderer
+
+## Document roles
+- owner-manual.pdf is the authoritative technical source
+- quick-start-guide.pdf is a fast visual setup guide
+- selection-chart.pdf is a visual decision support chart
+
+## Retrieval strategy implication
+Answers should prefer owner-manual evidence first, then enrich with quick-start or chart visuals when helpful.

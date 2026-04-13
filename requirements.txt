@@ -13,3 +13,5 @@ tabulate
 camelot-py
 opencv-python
 pdfplumber
+sentence-transformers
+faiss-cpu
