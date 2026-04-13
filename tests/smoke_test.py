@@ -8,6 +8,8 @@ from app.retrieval.keyword_search import KeywordSearch
 from app.retrieval.vector_store import VectorStore
 from app.retrieval.hybrid_search import HybridSearch
 from app.renderers import TextRenderer, TableRenderer, ImageRenderer, DiagramRenderer
+from app.vision.figure_matcher import FigureMatcher
+from app.vision.image_analysis import ImageAnalysis
 
 
 TEST_QUERIES = [
@@ -75,6 +77,7 @@ def print_plan_output(plan: Dict[str, Any]) -> None:
         "supporting_chunk_ids": [
             chunk["chunk_id"] for chunk in plan.get("supporting_chunks", [])
         ],
+        "num_image_results": len(plan.get("image_results", [])),
     }
 
     print_divider("Response Plan", "-")
@@ -84,6 +87,14 @@ def print_plan_output(plan: Dict[str, Any]) -> None:
 def print_render_output(render_output: Dict[str, Any]) -> None:
     print_divider("Render Output", "-")
     print(json.dumps(render_output, indent=2, ensure_ascii=False))
+
+
+def print_image_results(image_results: List[Dict[str, Any]]) -> None:
+    print_divider("Vision Matches", "-")
+    if not image_results:
+        print("No matched images.")
+        return
+    print(json.dumps(image_results, indent=2, ensure_ascii=False))
 
 
 def print_search_results(
@@ -128,6 +139,7 @@ def basic_assertions(
     keyword_results: List[Dict[str, Any]],
     vector_results: List[Dict[str, Any]],
     hybrid_results: List[Dict[str, Any]],
+    image_results: List[Dict[str, Any]],
     plan: Dict[str, Any],
     render_output: Dict[str, Any],
     orchestrator_output: Dict[str, Any],
@@ -140,6 +152,7 @@ def basic_assertions(
     assert isinstance(keyword_results, list)
     assert isinstance(vector_results, list)
     assert isinstance(hybrid_results, list)
+    assert isinstance(image_results, list)
 
     if vector_results:
         assert "vector_distance" in vector_results[0]
@@ -201,6 +214,8 @@ def run_query(
     keyword_search: KeywordSearch,
     vector_store: VectorStore,
     hybrid_search: HybridSearch,
+    figure_matcher: FigureMatcher,
+    image_analysis: ImageAnalysis,
     orchestrator: AgentOrchestrator,
 ) -> None:
     print_divider(f"QUERY: {query}")
@@ -208,8 +223,16 @@ def run_query(
     router_output = router.route(query)
     keyword_results = keyword_search.search(query, top_k=3)
     vector_results = vector_store.search(query, top_k=3)
-    hybrid_results = hybrid_search.search(query, top_k=3)
-    plan = planner.plan(router_output, hybrid_results)
+    hybrid_results = hybrid_search.search(
+    query,
+    router_output=router_output,
+    top_k=5
+)
+    
+    raw_image_results = figure_matcher.match(query, top_k=3)
+    image_results = image_analysis.summarize_images(raw_image_results)
+
+    plan = planner.plan(router_output, hybrid_results, image_results=image_results)
 
     renderer = get_renderer_for_format(plan["format"])
     render_output = renderer.render(plan)
@@ -217,7 +240,6 @@ def run_query(
     orchestrator_output = orchestrator.answer(query, use_claude=False)
 
     print_router_output(router_output)
-
     print_search_results("Keyword Search Results", keyword_results)
     print_search_results("Vector Search Results", vector_results, extra_fields=["vector_distance"])
     print_search_results(
@@ -225,7 +247,7 @@ def run_query(
         hybrid_results,
         extra_fields=["keyword_score", "vector_score", "combined_score"],
     )
-
+    print_image_results(image_results)
     print_plan_output(plan)
     print_render_output(render_output)
 
@@ -238,6 +260,7 @@ def run_query(
         keyword_results=keyword_results,
         vector_results=vector_results,
         hybrid_results=hybrid_results,
+        image_results=image_results,
         plan=plan,
         render_output=render_output,
         orchestrator_output=orchestrator_output,
@@ -255,6 +278,8 @@ def main() -> None:
     vector_store.load_index()
 
     hybrid_search = HybridSearch()
+    figure_matcher = FigureMatcher()
+    image_analysis = ImageAnalysis()
     orchestrator = AgentOrchestrator()
 
     print("Router initialized.")
@@ -262,6 +287,8 @@ def main() -> None:
     print("Keyword search initialized.")
     print("Vector store loaded.")
     print("Hybrid search initialized.")
+    print("Figure matcher initialized.")
+    print("Image analysis initialized.")
     print("Orchestrator initialized.")
 
     for query in TEST_QUERIES:
@@ -272,6 +299,8 @@ def main() -> None:
             keyword_search=keyword_search,
             vector_store=vector_store,
             hybrid_search=hybrid_search,
+            figure_matcher=figure_matcher,
+            image_analysis=image_analysis,
             orchestrator=orchestrator,
         )
 

@@ -8,6 +8,7 @@ class ImageRenderer:
     def render(self, plan: Dict[str, Any]) -> Dict[str, Any]:
         primary = plan.get("primary_chunk")
         supporting = plan.get("supporting_chunks", [])
+        image_results = plan.get("image_results", [])
 
         content_blocks: List[Dict[str, Any]] = []
 
@@ -33,5 +34,6 @@ class ImageRenderer:
                 "answer_style": plan.get("answer_style"),
                 "include_image": True,
                 "chunk_count": len(plan.get("chunks_to_use", [])),
+                "image_results": image_results,
             },
         }

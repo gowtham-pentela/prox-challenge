@@ -15,77 +15,6 @@ VOLTAGE_PATTERNS = {
 }
 
 
-INTENT_RULES = {
-    "troubleshooting": [
-        r"\bproblem\b",
-        r"\bissue\b",
-        r"\bnot working\b",
-        r"\bdoes not function\b",
-        r"\bwon't\b",
-        r"\btroubleshoot(?:ing)?\b",
-        r"\bfault\b",
-        r"\berror\b",
-        r"\bpossible causes\b",
-        r"\blikely solutions\b",
-        r"\bwhy is\b",
-    ],
-    "procedure": [
-        r"\bhow do i\b",
-        r"\bhow to\b",
-        r"\binstall\b",
-        r"\binstallation\b",
-        r"\bsetup\b",
-        r"\bset up\b",
-        r"\bload\b",
-        r"\breplace\b",
-        r"\bconnect\b",
-        r"\battach\b",
-        r"\bsteps\b",
-    ],
-    "specification": [
-        r"\bduty cycle\b",
-        r"\bpower input\b",
-        r"\bcurrent\b",
-        r"\bvoltage\b",
-        r"\bocv\b",
-        r"\bwire speed\b",
-        r"\bcapacity\b",
-        r"\bcurrent range\b",
-        r"\bspec\b",
-        r"\bspecification\b",
-        r"\bmaterials\b",
-    ],
-    "controls_lookup": [
-        r"\bfront panel\b",
-        r"\binterior controls\b",
-        r"\bcontrol\b",
-        r"\bbutton\b",
-        r"\bknob\b",
-        r"\bsocket\b",
-        r"\bswitch\b",
-        r"\bdisplay\b",
-    ],
-    "diagram": [
-        r"\bdiagram\b",
-        r"\bschematic\b",
-        r"\bpolarity\b",
-        r"\bwire it\b",
-        r"\bconnect it\b",
-        r"\bconnection\b",
-        r"\bwiring\b",
-        r"\bshow me\b",
-    ],
-    "selection_guidance": [
-        r"\bwhich process\b",
-        r"\bwhich welding\b",
-        r"\bwhat process\b",
-        r"\bwhich one should i use\b",
-        r"\bselection\b",
-        r"\bchart\b",
-    ],
-}
-
-
 class QueryRouter:
     def __init__(self):
         pass
@@ -110,38 +39,109 @@ class QueryRouter:
         return tags
 
     def detect_intent(self, query: str) -> str:
-        intent_scores = {intent: 0 for intent in INTENT_RULES}
+        q = query.lower()
 
-        for intent, patterns in INTENT_RULES.items():
-            for pattern in patterns:
-                if re.search(pattern, query):
-                    intent_scores[intent] += 1
-
-        best_intent = max(intent_scores, key=intent_scores.get)
-
-        if intent_scores[best_intent] == 0:
-            return "general_qa"
-
-        # Resolve ties by business priority.
-        # Diagram beats procedure because many "connect/setup" questions
-        # are better answered visually.
-        priority = [
-            "troubleshooting",
-            "diagram",
+        # Highest priority: specification-style questions
+        if any(term in q for term in [
+            "duty cycle",
+            "power input",
+            "current range",
+            "current",
+            "voltage",
+            "rating",
+            "amp",
+            "amps",
+            "amperage",
+            "ocv",
+            "capacity",
+            "wire speed",
+            "spec",
             "specification",
+            "materials",
+        ]):
+            return "specification"
+
+        # Troubleshooting
+        if any(term in q for term in [
+            "not working",
+            "does not function",
+            "does not work",
+            "won't",
+            "problem",
+            "issue",
+            "troubleshoot",
+            "troubleshooting",
+            "fault",
+            "error",
+            "possible causes",
+            "likely solutions",
+            "why is",
+            "failure",
+        ]):
+            return "troubleshooting"
+
+        # Procedure / setup
+        if any(term in q for term in [
+            "how do i",
+            "how to",
+            "install",
+            "installation",
+            "setup",
+            "set up",
+            "load",
+            "replace",
+            "attach",
+            "steps",
             "procedure",
-            "controls_lookup",
-            "selection_guidance",
-        ]
+            "configure",
+            "wire spool",
+            "feed roller",
+        ]):
+            return "procedure"
 
-        highest_score = max(intent_scores.values())
-        candidates = [intent for intent, score in intent_scores.items() if score == highest_score]
+        # Diagram / polarity / connection
+        if any(term in q for term in [
+            "diagram",
+            "schematic",
+            "polarity",
+            "wiring",
+            "connection",
+            "connector",
+            "positive",
+            "negative",
+            "layout",
+        ]):
+            return "diagram"
 
-        for preferred_intent in priority:
-            if preferred_intent in candidates:
-                return preferred_intent
+        # Controls lookup
+        if any(term in q for term in [
+            "front panel",
+            "interior controls",
+            "control",
+            "button",
+            "knob",
+            "socket",
+            "switch",
+            "display",
+        ]):
+            return "controls_lookup"
 
-        return best_intent
+        # Selection guidance
+        if any(term in q for term in [
+            "which process",
+            "which welding",
+            "what process",
+            "which one should i use",
+            "what should i use",
+            "best process",
+            "best welding",
+            "use for",
+            "selection",
+            "chart",
+        ]):
+            return "selection_guidance"
+
+        return "general_qa"
 
     def infer_output_mode(self, intent: str) -> str:
         if intent == "specification":
@@ -195,6 +195,9 @@ def main():
         "wire spool installation",
         "welder does not function troubleshooting",
         "which process should I use for stainless steel",
+        "best welding for stainless steel",
+        "what should I use for stainless steel",
+        "positive and negative polarity for flux cored",
     ]
 
     for query in test_queries:
