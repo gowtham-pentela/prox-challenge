@@ -1,0 +1,15 @@
+anthropic
+streamlit
+python-dotenv
+pydantic
+pandas
+numpy
+pymupdf
+pillow
+rank-bm25
+scikit-learn
+faiss-cpu
+tabulate
+camelot-py
+opencv-python
+pdfplumber
