@@ -1,17 +1,14 @@
-import sys
+import os
+import tempfile
 from pathlib import Path
-
-# Ensure project root is on Python path before importing app modules
-CURRENT_FILE = Path(__file__).resolve()
-PROJECT_ROOT = CURRENT_FILE.parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
-from typing import Dict, Any
+from typing import List
 
 import streamlit as st
+import sys
+import os
 
-from app.agent.orchestrator import AgentOrchestrator
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from app.agent.orchestrator import Orchestrator
 
 
 st.set_page_config(
@@ -20,227 +17,160 @@ st.set_page_config(
     layout="wide",
 )
 
-
-SAMPLE_QUERIES = [
-    "duty cycle MIG 240V",
-    "polarity setup flux cored",
-    "front panel controls",
-    "wire spool installation",
-    "welder does not function troubleshooting",
-    "which process should I use for stainless steel",
-]
+SUPPORTED_IMAGE_TYPES = ["png", "jpg", "jpeg", "webp"]
 
 
 @st.cache_resource
-def get_orchestrator() -> AgentOrchestrator:
-    return AgentOrchestrator()
+def get_orchestrator() -> Orchestrator:
+    return Orchestrator()
 
 
-def render_header() -> None:
-    st.title("Vulcan OmniPro 220 Multimodal Agent")
-    st.caption(
-        "Ask technical questions about the welder manual. "
-        "The system uses intent-aware retrieval, structured planning, and visual grounding."
-    )
+def save_uploaded_files(uploaded_files) -> List[str]:
+    saved_paths = []
+
+    if not uploaded_files:
+        return saved_paths
+
+    temp_dir = Path(tempfile.gettempdir()) / "vulcan_agent_uploads"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+
+    for uploaded_file in uploaded_files:
+        suffix = Path(uploaded_file.name).suffix.lower()
+        if suffix.replace(".", "") not in SUPPORTED_IMAGE_TYPES:
+            continue
+
+        file_path = temp_dir / uploaded_file.name
+        with open(file_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+
+        saved_paths.append(str(file_path))
+
+    return saved_paths
 
 
-def render_sidebar() -> Dict[str, Any]:
-    st.sidebar.header("Controls")
-
-    selected_sample = st.sidebar.selectbox(
-        "Sample queries",
-        options=[""] + SAMPLE_QUERIES,
-        index=0,
-    )
-
-    use_claude = st.sidebar.toggle("Use Claude", value=False)
-    show_debug = st.sidebar.toggle("Show debug panels", value=True)
-
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### Example prompts")
-    for q in SAMPLE_QUERIES:
-        st.sidebar.caption(f"• {q}")
-
-    return {
-        "selected_sample": selected_sample,
-        "use_claude": use_claude,
-        "show_debug": show_debug,
-    }
-
-
-def render_plan_summary(result: Dict[str, Any]) -> None:
-    plan = result["plan"]
-
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Intent", plan.get("intent", "N/A"))
-    col2.metric("Format", plan.get("format", "N/A"))
-    col3.metric("Style", plan.get("answer_style", "N/A"))
-    col4.metric("Generation", result.get("generation_mode", "N/A"))
-
-    with st.expander("Plan details", expanded=False):
-        st.json(
-            {
-                "intent": plan.get("intent"),
-                "format": plan.get("format"),
-                "answer_style": plan.get("answer_style"),
-                "include_table": plan.get("include_table"),
-                "include_diagram": plan.get("include_diagram"),
-                "include_image": plan.get("include_image"),
-                "process_tags": plan.get("process_tags", []),
-                "voltage_tags": plan.get("voltage_tags", []),
-                "primary_chunk_id": (
-                    plan["primary_chunk"]["chunk_id"]
-                    if plan.get("primary_chunk")
-                    else None
-                ),
-                "supporting_chunk_ids": [
-                    chunk["chunk_id"] for chunk in plan.get("supporting_chunks", [])
-                ],
-            }
-        )
-
-
-def render_final_answer(result: Dict[str, Any]) -> None:
-    st.subheader("Answer")
-    st.markdown(result["final_answer"])
-
-
-def render_primary_and_supporting_chunks(result: Dict[str, Any]) -> None:
-    plan = result["plan"]
-    primary = plan.get("primary_chunk")
-    supporting = plan.get("supporting_chunks", [])
-
-    st.subheader("Evidence")
-
-    if primary:
-        with st.container(border=True):
-            st.markdown("**Primary source**")
-            st.write(
-                f"Section: {primary.get('section_title')} | "
-                f"Page: {primary.get('page_number')} | "
-                f"Type: {primary.get('content_type')}"
-            )
-            st.caption(primary.get("chunk_id"))
-            st.text(primary.get("text", "")[:1500])
-
-    if supporting:
-        st.markdown("**Supporting sources**")
-        for chunk in supporting:
-            with st.expander(
-                f"{chunk.get('section_title')} | Page {chunk.get('page_number')} | {chunk.get('content_type')}",
-                expanded=False,
-            ):
-                st.caption(chunk.get("chunk_id"))
-                st.text(chunk.get("text", "")[:1500])
-
-
-def try_render_image(path_str: str, caption: str) -> None:
-    if not path_str:
-        st.caption(caption)
+def render_plan_summary(plan: dict):
+    if not plan:
         return
 
-    path = Path(path_str)
-    if path.exists():
-        st.image(str(path), caption=caption, use_container_width=True)
-    else:
-        st.caption(f"{caption}\n\nImage path not found: {path_str}")
+    st.subheader("Plan Summary")
+    st.json(
+        {
+            "intent": plan.get("intent"),
+            "format": plan.get("format"),
+            "answer_style": plan.get("answer_style"),
+            "include_image": plan.get("include_image"),
+            "include_diagram": plan.get("include_diagram"),
+            "include_table": plan.get("include_table"),
+            "num_image_results": plan.get("num_image_results"),
+            "notes": plan.get("notes"),
+        }
+    )
 
 
-def render_visual_references(result: Dict[str, Any]) -> None:
-    image_results = result.get("image_results", [])
-
-    st.subheader("Matched Visual References")
-
+def render_manual_image_matches(image_results: list):
     if not image_results:
-        st.info("No visual references matched this query.")
         return
 
-    cols = st.columns(min(3, len(image_results)))
-    for idx, img in enumerate(image_results):
-        caption = (
-            f"Page {img.get('page_number', 'N/A')} | "
-            f"{img.get('section_title') or 'Visual reference'}"
-        )
+    st.subheader("Matched Manual Figures")
+
+    for idx, item in enumerate(image_results, start=1):
+        st.markdown(f"**Figure {idx}**")
+        st.write("Page:", item.get("page"))
+        st.write("Score:", item.get("score"))
+        st.write("Why matched:", item.get("match_reason"))
+
+        image_path = item.get("path")
+        raw = item.get("raw", {}) if isinstance(item.get("raw"), dict) else {}
+        image_path = image_path or raw.get("image_path")
+
+        if image_path and os.path.exists(image_path):
+            st.image(image_path, caption=item.get("caption") or "Matched manual figure", use_container_width=True)
+        else:
+            st.caption(item.get("caption") or "No preview available")
+
+        st.divider()
+
+
+def render_uploaded_images(uploaded_files):
+    if not uploaded_files:
+        return
+
+    st.subheader("Uploaded Images")
+    cols = st.columns(min(3, len(uploaded_files)))
+
+    for idx, uploaded_file in enumerate(uploaded_files):
         with cols[idx % len(cols)]:
-            try_render_image(img.get("path"), caption)
-            score = img.get("vision_score", None)
-            if score is not None:
-                st.caption(f"Vision score: {score}")
-            raw_caption = img.get("caption", "")
-            if raw_caption:
-                with st.expander("Caption / OCR context", expanded=False):
-                    st.text(raw_caption[:1200])
+            st.image(uploaded_file, caption=uploaded_file.name, use_container_width=True)
 
 
-def render_debug_panels(result: Dict[str, Any]) -> None:
-    st.subheader("Debug")
+def main():
+    st.title("⚡ Vulcan OmniPro 220 Multimodal Agent")
+    st.write(
+        "Ask questions about the welder using text, images, or both. "
+        "The agent retrieves manual evidence, matches figures, and generates structured answers."
+    )
 
-    with st.expander("Router output", expanded=False):
-        st.json(result.get("router_output", {}))
-
-    with st.expander("Render output", expanded=False):
-        st.json(result.get("render_output", {}))
-
-    with st.expander("Top hybrid results", expanded=False):
-        hybrid_results = result.get("hybrid_results", [])
-        preview = []
-        for item in hybrid_results[:10]:
-            preview.append(
-                {
-                    "chunk_id": item.get("chunk_id"),
-                    "section_title": item.get("section_title"),
-                    "page_number": item.get("page_number"),
-                    "content_type": item.get("content_type"),
-                    "keyword_score": item.get("keyword_score"),
-                    "vector_score": item.get("vector_score"),
-                    "combined_score": item.get("combined_score"),
-                    "process_tags": item.get("process_tags", []),
-                    "voltage_tags": item.get("voltage_tags", []),
-                    "text_preview": item.get("text", "")[:400],
-                }
-            )
-        st.json(preview)
-
-
-def main() -> None:
-    render_header()
-    controls = render_sidebar()
     orchestrator = get_orchestrator()
 
-    default_query = controls["selected_sample"] if controls["selected_sample"] else ""
+    with st.sidebar:
+        st.header("Input")
+        use_claude = st.checkbox("Use Claude for final synthesis", value=True)
 
-    query = st.text_input(
-        "Ask a question about the Vulcan OmniPro 220",
-        value=default_query,
-        placeholder="Example: duty cycle MIG 240V",
-    )
+        uploaded_files = st.file_uploader(
+            "Upload image(s)",
+            type=SUPPORTED_IMAGE_TYPES,
+            accept_multiple_files=True,
+            help="Upload weld photos, front panel photos, setup images, or screenshots.",
+        )
 
-    run = st.button("Run agent", type="primary", use_container_width=True)
+        query = st.text_area(
+            "Question",
+            placeholder="Example: Does this polarity setup look correct?",
+            height=120,
+        )
 
-    if not run:
-        st.info("Enter a question or choose a sample query, then click Run agent.")
-        return
+        submit = st.button("Run Agent", type="primary", use_container_width=True)
 
-    if not query.strip():
-        st.warning("Please enter a question.")
-        return
+    render_uploaded_images(uploaded_files)
 
-    with st.spinner("Running agent..."):
-        result = orchestrator.answer(query=query, use_claude=controls["use_claude"])
+    if submit:
+        if not query and not uploaded_files:
+            st.warning("Please enter a question, upload an image, or both.")
+            return
 
-    render_plan_summary(result)
+        with st.spinner("Analyzing input and retrieving manual evidence..."):
+            image_paths = save_uploaded_files(uploaded_files)
+            safe_query = query.strip() if query else "Analyze the uploaded image and explain what it shows."
 
-    left, right = st.columns([1.5, 1])
+            result = orchestrator.answer(
+                query=safe_query,
+                image_paths=image_paths,
+                use_claude=use_claude,
+            )
 
-    with left:
-        render_final_answer(result)
-        render_primary_and_supporting_chunks(result)
+        st.success("Done")
 
-    with right:
-        render_visual_references(result)
+        st.subheader("Final Answer")
+        st.markdown(result.get("final_answer", "No answer generated."))
 
-    if controls["show_debug"]:
-        render_debug_panels(result)
+        if result.get("visual_analysis"):
+            st.subheader("Visual Analysis")
+            st.text(result["visual_analysis"])
+
+        render_plan_summary(result.get("plan", {}))
+        render_manual_image_matches(result.get("manual_image_results", []))
+
+        with st.expander("Retrieved Chunks"):
+            for idx, chunk in enumerate(result.get("hybrid_results", [])[:5], start=1):
+                st.markdown(
+                    f"**Chunk {idx}** | "
+                    f"Page: {chunk.get('page', chunk.get('page_number', 'unknown'))} | "
+                    f"Section: {chunk.get('section_title', 'unknown')}"
+                )
+                st.code(chunk.get("text", "")[:1500])
+
+        with st.expander("Raw Render Output"):
+            st.json(result.get("render_output", {}))
 
 
 if __name__ == "__main__":

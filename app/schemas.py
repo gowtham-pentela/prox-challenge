@@ -1,61 +1,41 @@
-from typing import Dict, List, Optional
-from pydantic import BaseModel, Field
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
 
-class ManualPage(BaseModel):
-    page_number: int
-    source_file: str
-    text: str
-    section_title: Optional[str] = None
-    metadata: Dict = Field(default_factory=dict)
+@dataclass
+class UserInput:
+    query: str
+    image_paths: List[str] = field(default_factory=list)
+    metadata: Optional[Dict[str, Any]] = None
 
 
-class ManualChunk(BaseModel):
+@dataclass
+class RetrievalResult:
     chunk_id: str
-    page_number: int
-    source_file: str
-    section_title: Optional[str] = None
-    content_type: str
-    topics: List[str] = Field(default_factory=list)
-    process_tags: List[str] = Field(default_factory=list)
-    voltage_tags: List[str] = Field(default_factory=list)
     text: str
-    source_path: Optional[str] = None
-
-
-class ManualTable(BaseModel):
-    table_id: str
-    page_number: int
-    source_file: str
+    score: float
+    page: Optional[int] = None
+    source_file: Optional[str] = None
     section_title: Optional[str] = None
-    content_type: str = "table"
-    topics: List[str] = Field(default_factory=list)
-    process_tags: List[str] = Field(default_factory=list)
-    voltage_tags: List[str] = Field(default_factory=list)
-    headers: List[str] = Field(default_factory=list)
-    rows: List[List[str]] = Field(default_factory=list)
-    raw_text: str
+    content_type: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
-class ManualImage(BaseModel):
-    image_id: str
-    page_number: int
-    source_file: str
-    section_title: Optional[str] = None
-    content_type: str = "image"
-    topics: List[str] = Field(default_factory=list)
-    process_tags: List[str] = Field(default_factory=list)
-    voltage_tags: List[str] = Field(default_factory=list)
-    image_path: str
-    caption: Optional[str] = None
-    nearby_text: Optional[str] = None
+@dataclass
+class RouterOutput:
+    intent: str
+    visual_analysis_used: bool = False
+    image_evidence_present: bool = False
+    query_type: Optional[str] = None
+    notes: Optional[str] = None
 
 
-class InventoryEntry(BaseModel):
-    page_start: int
-    page_end: int
-    source_file: str
-    section_title: str
-    content_types: List[str] = Field(default_factory=list)
-    topics: List[str] = Field(default_factory=list)
+@dataclass
+class PlanOutput:
+    intent: str
+    format: str
+    answer_style: str
+    primary_chunk_id: Optional[str] = None
+    generation_mode: str = "render_then_claude"
+    num_image_results: int = 0
     notes: Optional[str] = None

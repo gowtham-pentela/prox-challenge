@@ -1,6 +1,6 @@
 import json
 import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from app.config import DATA_DIR
 
@@ -12,7 +12,7 @@ class FigureMatcher:
 
     def _load_manifest(self) -> List[Dict[str, Any]]:
         if not self.manifest_path.exists():
-            print(f"[FigureMatcher] No image manifest found at: {self.manifest_path}")
+            print("[FigureMatcher] No image manifest found at: {0}".format(self.manifest_path))
             return []
 
         with open(self.manifest_path, "r", encoding="utf-8") as f:
@@ -54,43 +54,74 @@ class FigureMatcher:
         ]
         return " ".join([str(x) for x in candidates if x])
 
-    def _score_image(self, query: str, image: Dict[str, Any]) -> float:
-        query_norm = self._normalize(query)
-        query_tokens = set(self._tokenize(query_norm))
-        image_text = self._normalize(self._get_image_text(image))
-        image_tokens = set(self._tokenize(image_text))
-
-        score = 0.0
-
+    def _score_token_overlap(self, query_tokens: set, image_tokens: set) -> float:
         overlap = query_tokens & image_tokens
-        score += len(overlap) * 2.0
+        return float(len(overlap)) * 2.0
 
-        if any(term in query_norm for term in ["diagram", "polarity", "wiring", "connection", "socket"]):
-            if any(term in image_text for term in ["diagram", "polarity", "wiring", "socket", "positive", "negative"]):
+    def _score_category_boosts(self, combined_query: str, image_text: str, desired_render: str = "") -> float:
+        score = 0.0
+        reasons = []
+
+        diagram_query_terms = ["diagram", "polarity", "wiring", "connection", "socket", "dcen", "dcep", "ground clamp", "positive", "negative"]
+        diagram_image_terms = ["diagram", "polarity", "wiring", "socket", "positive", "negative", "ground clamp", "dcen", "dcep"]
+
+        controls_query_terms = ["front panel", "control", "knob", "display", "button", "screen"]
+        controls_image_terms = ["front panel", "controls", "knob", "display", "button", "screen"]
+
+        spool_query_terms = ["wire spool", "feed roller", "feed tensioner", "idler arm", "spool", "wire feed"]
+        spool_image_terms = ["wire spool", "feed roller", "feed tensioner", "idler arm", "spool", "wire feed"]
+
+        troubleshoot_query_terms = ["troubleshooting", "problem", "burn-through", "burn through", "weld", "spatter", "porosity", "undercut", "defect"]
+        troubleshoot_image_terms = ["troubleshooting", "diagnosis", "weld", "penetration", "burn-through", "burn through", "spatter", "porosity", "undercut", "defect"]
+
+        specs_query_terms = ["duty cycle", "240v", "120v", "amperage", "current", "voltage", "specification"]
+        specs_image_terms = ["duty cycle", "duration of use", "overheats", "warning screen", "current", "voltage", "specification"]
+
+        if any(term in combined_query for term in diagram_query_terms):
+            if any(term in image_text for term in diagram_image_terms):
                 score += 4.0
+                reasons.append("diagram/polarity match")
 
-        if any(term in query_norm for term in ["front panel", "control", "knob", "display"]):
-            if any(term in image_text for term in ["front panel", "controls", "knob", "display", "button"]):
+        if any(term in combined_query for term in controls_query_terms):
+            if any(term in image_text for term in controls_image_terms):
                 score += 4.0
+                reasons.append("controls match")
 
-        if any(term in query_norm for term in ["wire spool", "feed roller", "feed tensioner", "idler arm"]):
-            if any(term in image_text for term in ["wire spool", "feed roller", "feed tensioner", "idler arm", "spool"]):
+        if any(term in combined_query for term in spool_query_terms):
+            if any(term in image_text for term in spool_image_terms):
                 score += 4.0
+                reasons.append("spool/feed match")
 
-        if any(term in query_norm for term in ["troubleshooting", "problem", "burn-through", "weld"]):
-            if any(term in image_text for term in ["troubleshooting", "diagnosis", "weld", "penetration", "burn-through"]):
+        if any(term in combined_query for term in troubleshoot_query_terms):
+            if any(term in image_text for term in troubleshoot_image_terms):
                 score += 4.0
+                reasons.append("troubleshooting match")
 
-        if any(term in query_norm for term in ["duty cycle", "240v", "120v", "amperage", "current"]):
-            if any(term in image_text for term in ["duty cycle", "duration of use", "overheats", "warning screen"]):
+        if any(term in combined_query for term in specs_query_terms):
+            if any(term in image_text for term in specs_image_terms):
                 score += 4.0
+                reasons.append("specification match")
 
-        if image.get("page_number") is not None:
+        if desired_render == "diagram" and any(term in image_text for term in diagram_image_terms):
+            score += 2.5
+            reasons.append("diagram render preference")
+
+        if desired_render == "image_plus_text" and any(
+            term in image_text for term in controls_image_terms + troubleshoot_image_terms + spool_image_terms
+        ):
+            score += 2.0
+            reasons.append("image-plus-text render preference")
+
+        return score, reasons
+
+    def _score_metadata_quality(self, image: Dict[str, Any]) -> float:
+        score = 0.0
+        if image.get("page") is not None or image.get("page_number") is not None:
             score += 0.5
-
         if image.get("section_title"):
             score += 0.5
-
+        if image.get("caption"):
+            score += 0.5
         return score
 
     def _deduplicate(self, images: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -100,8 +131,9 @@ class FigureMatcher:
         for img in images:
             caption = (img.get("caption") or img.get("nearby_text") or "")[:120]
             key = (
-                img.get("page_number"),
+                img.get("page") or img.get("page_number"),
                 self._normalize(caption),
+                img.get("path"),
             )
             if key not in seen:
                 seen.add(key)
@@ -109,18 +141,63 @@ class FigureMatcher:
 
         return unique
 
-    def match(self, query: str, top_k: int = 3) -> List[Dict[str, Any]]:
+    def _build_match_reason(self, overlap_terms: List[str], category_reasons: List[str]) -> str:
+        parts = []
+
+        if overlap_terms:
+            parts.append("token overlap: {0}".format(", ".join(overlap_terms[:6])))
+
+        if category_reasons:
+            parts.append(" | ".join(category_reasons))
+
+        return "; ".join(parts) if parts else "general relevance"
+
+    def match(
+        self,
+        query: str,
+        top_k: int = 3,
+        visual_analysis: str = "",
+        desired_render: str = "",
+    ) -> List[Dict[str, Any]]:
         if not self.images:
             return []
 
+        combined_query = self._normalize(
+            "{0} {1}".format(query or "", visual_analysis or "")
+        )
+        query_tokens = set(self._tokenize(combined_query))
+
         scored = []
         for image in self.images:
-            score = self._score_image(query, image)
-            if score > 0:
-                enriched = image.copy()
-                enriched["vision_score"] = round(score, 4)
-                scored.append(enriched)
+            image_text = self._normalize(self._get_image_text(image))
+            image_tokens = set(self._tokenize(image_text))
 
-        scored.sort(key=lambda x: x["vision_score"], reverse=True)
+            overlap_terms = sorted(list(query_tokens & image_tokens))
+            score = self._score_token_overlap(query_tokens, image_tokens)
+
+            category_score, category_reasons = self._score_category_boosts(
+                combined_query=combined_query,
+                image_text=image_text,
+                desired_render=desired_render,
+            )
+            score += category_score
+            score += self._score_metadata_quality(image)
+
+            if score <= 0:
+                continue
+
+            enriched = {
+                "path": image.get("path"),
+                "page": image.get("page") or image.get("page_number"),
+                "section_title": image.get("section_title"),
+                "caption": image.get("caption") or image.get("nearby_text") or image.get("title"),
+                "ocr_text": image.get("ocr_text"),
+                "score": round(score, 4),
+                "match_reason": self._build_match_reason(overlap_terms, category_reasons),
+                "raw": image,
+            }
+            scored.append(enriched)
+
+        scored.sort(key=lambda x: x["score"], reverse=True)
         scored = self._deduplicate(scored)
         return scored[:top_k]
