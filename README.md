@@ -111,12 +111,12 @@ This project transforms dense welding manuals into an interactive AI agent that 
 
 ---
 
-## 🌐 Live Demo
+##  Live Demo
 
-👉 **Streamlit App**  
+ **Streamlit App**  
 https://vulcanomnipro220agent.streamlit.app/
 
-> ⚠️ **Note:**  
+> **Note:**  
 The deployed app currently shows degraded output because the Anthropic API key is not accessible in Streamlit Cloud.  
 As a result, responses fall back to raw structured data instead of synthesized answers.  
 Locally, with a valid API key, the system produces fully grounded and clean responses.
@@ -146,27 +146,27 @@ Instead of behaving like a document search tool, this system:
 -  Keyword search (precision)
 -  Semantic search (recall)
 
-### 🔹 Figure Matching
+###  Figure Matching
 -  Finds relevant diagrams and images from manuals
 
-### 🔹 Intelligent Response Planning
+###  Intelligent Response Planning
 Decides the best format:
 -  Tables
 -  Diagrams
 -  Image-supported explanations
 -  Step-by-step instructions
 
-### 🔹 Structured Rendering
+###  Structured Rendering
 -  Polarity diagrams (ASCII)
 -  Specification tables
 -  Visual explanations
 
-### 🔹 Answer Synthesis
+### Answer Synthesis
 -  Produces **final answers**, not raw manual dumps
 
 ---
 
-## 🧠 Architecture
+##  Architecture
 
 ### High-Level Pipeline
 
@@ -198,7 +198,7 @@ Final Answer
 
 ---
 
-## 🏗️ System Design
+##  System Design
 
 ### 1. Ingestion Layer
 
