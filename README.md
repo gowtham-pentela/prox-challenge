@@ -104,10 +104,10 @@ This project transforms dense welding manuals into an **interactive AI agent** t
 
 This project transforms dense welding manuals into an interactive AI agent that can answer complex questions using:
 
-- • Manual retrieval  
-- • Image understanding  
-- • Structured outputs (tables, diagrams)  
-- • Reasoned answer synthesis  
+-  Manual retrieval  
+-  Image understanding  
+-  Structured outputs (tables, diagrams)  
+-  Reasoned answer synthesis  
 
 ---
 
@@ -127,42 +127,42 @@ Locally, with a valid API key, the system produces fully grounded and clean resp
 
 Instead of behaving like a document search tool, this system:
 
-- • Answers **specification queries** with tables  
-- • Explains **setup and polarity** using diagrams  
-- • Identifies **controls and components** using images  
-- • Diagnoses **weld defects and issues**  
-- • Supports **image + text reasoning**
+-  Answers **specification queries** with tables  
+-  Explains **setup and polarity** using diagrams  
+-  Identifies **controls and components** using images  
+-  Diagnoses **weld defects and issues**  
+-  Supports **image + text reasoning**
 
 ---
 
 ## Key Features
 
 ### Multimodal Input
-- • Text-only queries  
-- • Image-only queries  
-- • Combined text + image reasoning  
+-  Text-only queries  
+-  Image-only queries  
+-  Combined text + image reasoning  
 
 ### Hybrid Retrieval
-- • Keyword search (precision)
-- • Semantic search (recall)
+-  Keyword search (precision)
+-  Semantic search (recall)
 
 ### 🔹 Figure Matching
-- • Finds relevant diagrams and images from manuals
+-  Finds relevant diagrams and images from manuals
 
 ### 🔹 Intelligent Response Planning
 Decides the best format:
-- • Tables
-- • Diagrams
-- • Image-supported explanations
-- • Step-by-step instructions
+-  Tables
+-  Diagrams
+-  Image-supported explanations
+-  Step-by-step instructions
 
 ### 🔹 Structured Rendering
-- • Polarity diagrams (ASCII)
-- • Specification tables
-- • Visual explanations
+-  Polarity diagrams (ASCII)
+-  Specification tables
+-  Visual explanations
 
 ### 🔹 Answer Synthesis
-- • Produces **final answers**, not raw manual dumps
+-  Produces **final answers**, not raw manual dumps
 
 ---
 
@@ -202,14 +202,14 @@ Final Answer
 
 ### 1. Ingestion Layer
 
-* • Parses PDFs
-* • Extracts text, images, tables
-* • Creates structured datasets
+*  Parses PDFs
+*  Extracts text, images, tables
+*  Creates structured datasets
 
 ### 2. Retrieval Layer
 
-* • Hybrid search (keyword + vector)
-* • Finds relevant manual chunks
+*  Hybrid search (keyword + vector)
+*  Finds relevant manual chunks
 
 ### 3. Vision Layer
 
@@ -224,28 +224,28 @@ Final Answer
 
 Determines:
 
-* • Intent (specification, procedure, troubleshooting)
-* • Output type (diagram, table, etc.)
+*  Intent (specification, procedure, troubleshooting)
+*  Output type (diagram, table, etc.)
 
 ###  5. Response Planner
 
 Decides:
 
-* • What content to use
-* • How to present it
+*  What content to use
+*  How to present it
 
 ###  6. Renderers
 
 Generate structured outputs:
 
-* • Tables
-* • Diagrams
-* • Image-supported responses
+*  Tables
+*  Diagrams
+*  Image-supported responses
 
 ###  7. Answer Synthesis
 
-* • Claude converts structured output into final answers
-* • Ensures clarity and correctness
+*  Claude converts structured output into final answers
+*  Ensures clarity and correctness
 
 ---
 
@@ -336,9 +336,9 @@ duty cycle MIG 240V
 
 **Flow:**
 
-* • Routed to specification
-* • Retrieves duty cycle tables
-* • Returns structured table + explanation
+*  Routed to specification
+*  Retrieves duty cycle tables
+*  Returns structured table + explanation
 
 ---
 
@@ -352,9 +352,9 @@ polarity setup flux cored
 
 **Output:**
 
-* • Generated diagram
-* • Step-by-step instructions
-* • Grounded explanation
+*  Generated diagram
+*  Step-by-step instructions
+*  Grounded explanation
 
 
 ---
@@ -448,45 +448,45 @@ Without API key:
 
 ### Specifications
 
-* • duty cycle MIG 240V
-* • voltage range
+*  duty cycle MIG 240V
+*  voltage range
 
 ### Setup
 
-* • polarity setup flux cored
-* • wire spool installation
+*  polarity setup flux cored
+*  wire spool installation
 
 ### Controls
 
-* • front panel controls
+*  front panel controls
 
 ### Troubleshooting
 
-* • welder not working
-* • weld porosity causes
+*  welder not working
+*  weld porosity causes
 
 ### Image Queries
 
-* • Does this weld look correct?
-* • What defect is this?
+*  Does this weld look correct?
+*  What defect is this?
 
 ---
 
 ##  Limitations
 
-* • Streamlit Cloud missing API key → degraded output
-* • Figure matching still heuristic-based
-* • Diagram rendering is ASCII (can be improved)
+*  Streamlit Cloud missing API key → degraded output
+*  Figure matching still heuristic-based
+*  Diagram rendering is ASCII (can be improved)
 
 ---
 
 ## Future Improvements
 
-* • Stronger answer synthesis layer
-* • Better figure ranking
-* • Rich UI diagrams (SVG/interactive)
-* • Evaluation framework
-* • Improved multimodal reasoning
+*  Stronger answer synthesis layer
+*  Better figure ranking
+*  Rich UI diagrams (SVG/interactive)
+*  Evaluation framework
+*  Improved multimodal reasoning
 
 ---
 
@@ -494,14 +494,14 @@ Without API key:
 
 This project demonstrates a **multimodal reasoning agent** that:
 
-* • Understands both text and images
-* • Retrieves relevant manual content
-* • Decides the best way to present answers
-* • Produces structured, grounded responses
+*  Understands both text and images
+*  Retrieves relevant manual content
+*  Decides the best way to present answers
+*  Produces structured, grounded responses
 
 It goes beyond simple RAG by combining:
 
-- • Retrieval + Planning + Rendering + Reasoning
+-  Retrieval + Planning + Rendering + Reasoning
 
 ---
 
