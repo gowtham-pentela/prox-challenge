@@ -91,358 +91,276 @@ If it takes longer than that to set up, that's a problem.
 
 We review submissions on a rolling basis and respond to every single one within a few days. Good luck.
 -->
-# Vulcan OmniPro 220 Multimodal Agent
 
-A **multimodal, intent-aware Retrieval-Augmented Generation (RAG) system** that answers technical questions about welding equipment using structured reasoning, hybrid search, and visual grounding.
+# ⚡ Vulcan OmniPro 220 Multimodal Reasoning Agent
+
+[![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)]()
+[![Streamlit](https://img.shields.io/badge/Streamlit-App-red)]()
+[![License](https://img.shields.io/badge/License-MIT-green.svg)]()
+
+A multimodal technical assistant for the **Vulcan OmniPro 220 welding system**.
+
+This project transforms dense welding manuals into an **interactive AI agent** that can answer complex questions using:
+
+This project transforms dense welding manuals into an interactive AI agent that can answer complex questions using:
+
+- • Manual retrieval  
+- • Image understanding  
+- • Structured outputs (tables, diagrams)  
+- • Reasoned answer synthesis  
 
 ---
 
-## Overview
+## 🌐 Live Demo
 
-This project builds an intelligent assistant that can:
+👉 **Streamlit App**  
+https://vulcanomnipro220agent.streamlit.app/
 
-* Understand user intent (specifications, troubleshooting, setup, etc.)
-* Retrieve relevant sections from technical manuals
-* Combine keyword + vector search for accurate retrieval
-* Ground answers using both **text and images**
-* Generate structured responses (tables, steps, diagrams)
-* Optionally use an LLM (Claude) for final answer synthesis
+> ⚠️ **Note:**  
+The deployed app currently shows degraded output because the Anthropic API key is not accessible in Streamlit Cloud.  
+As a result, responses fall back to raw structured data instead of synthesized answers.  
+Locally, with a valid API key, the system produces fully grounded and clean responses.
 
 ---
 
-## System Architecture
+## What This Agent Does
 
-The system follows a modular agent pipeline:
+Instead of behaving like a document search tool, this system:
+
+- • Answers **specification queries** with tables  
+- • Explains **setup and polarity** using diagrams  
+- • Identifies **controls and components** using images  
+- • Diagnoses **weld defects and issues**  
+- • Supports **image + text reasoning**
+
+---
+
+## Key Features
+
+### Multimodal Input
+- • Text-only queries  
+- • Image-only queries  
+- • Combined text + image reasoning  
+
+### Hybrid Retrieval
+- • Keyword search (precision)
+- • Semantic search (recall)
+
+### 🔹 Figure Matching
+- • Finds relevant diagrams and images from manuals
+
+### 🔹 Intelligent Response Planning
+Decides the best format:
+- • Tables
+- • Diagrams
+- • Image-supported explanations
+- • Step-by-step instructions
+
+### 🔹 Structured Rendering
+- • Polarity diagrams (ASCII)
+- • Specification tables
+- • Visual explanations
+
+### 🔹 Answer Synthesis
+- • Produces **final answers**, not raw manual dumps
+
+---
+
+## 🧠 Architecture
+
+### High-Level Pipeline
 
 ```text
-User Query
-   ↓
-Query Router (intent + tags)
-   ↓
-Hybrid Search (keyword + vector + boosting)
-   ↓
-Response Planner (structure + chunk selection)
-   ↓
-Renderers (format-specific output)
-   ↓
-(Optional) LLM Generation (Claude)
-   ↓
-Final Answer + Visual References
-```
+User Query / Image
+        ↓
+Visual Analysis (Claude Vision)
+        ↓
+Hybrid Retrieval
+  ├── Keyword Search
+  └── Semantic Search
+        ↓
+Figure Matching
+        ↓
+Query Router
+        ↓
+Response Planner
+        ↓
+Renderer
+  ├── Table
+  ├── Diagram
+  ├── Image
+  └── Text
+        ↓
+Claude Answer Synthesis
+        ↓
+Final Answer
+````
 
 ---
 
-## Key Components
+## 🏗️ System Design
 
-### 1. Query Router
+### 1. Ingestion Layer
 
-* Classifies query intent:
+* • Parses PDFs
+* • Extracts text, images, tables
+* • Creates structured datasets
 
-  * specification
-  * procedure
-  * troubleshooting
-  * diagram
-  * controls lookup
-  * selection guidance
+### 2. Retrieval Layer
+
+* • Hybrid search (keyword + vector)
+* • Finds relevant manual chunks
+
+### 3. Vision Layer
+
+* Uses Claude to analyze uploaded images
 * Extracts:
 
-  * process tags (MIG, TIG, Flux-cored)
-  * voltage tags (120V, 240V)
-* Determines:
+  * polarity setup
+  * weld defects
+  * control panels
 
-  * expected output format (table, steps, etc.)
+### 4. Query Router
 
----
+Determines:
 
-### 2. Hybrid Search
+* • Intent (specification, procedure, troubleshooting)
+* • Output type (diagram, table, etc.)
 
-Combines:
+###  5. Response Planner
 
-* **Keyword search** (BM25-style relevance)
-* **Vector search** (semantic similarity via FAISS)
+Decides:
 
-Enhancements:
+* • What content to use
+* • How to present it
 
-* Intent-aware boosting
-* Tag-based boosting (process + voltage)
+###  6. Renderers
 
-Example:
+Generate structured outputs:
 
-```
-"duty cycle MIG 240V"
-→ boosts:
-  - specification chunks
-  - MIG-related chunks
-  - 240V-related chunks
-```
+* • Tables
+* • Diagrams
+* • Image-supported responses
 
----
+###  7. Answer Synthesis
 
-### 3. Response Planner
-
-* Selects:
-
-  * primary chunk
-  * supporting chunks
-* Determines:
-
-  * answer style (instructional, diagnostic, etc.)
-  * output format
-* Integrates:
-
-  * visual references (images)
+* • Claude converts structured output into final answers
+* • Ensures clarity and correctness
 
 ---
 
-### 4. Vision Module
-
-* Matches extracted images to queries
-* Uses:
-
-  * captions
-  * nearby text
-  * OCR context
-* Returns:
-
-  * relevant diagrams
-  * UI panels
-  * troubleshooting visuals
-
----
-
-### 5. Renderers
-
-Format-specific output generation:
-
-| Intent          | Renderer             |
-| --------------- | -------------------- |
-| Specification   | Table                |
-| Procedure       | Step-by-step         |
-| Troubleshooting | Image + text         |
-| Diagram         | Structured diagram   |
-| Controls        | Visual + explanation |
-
----
-
-### 6. Orchestrator
-
-Central controller that:
-
-* connects all modules
-* manages pipeline execution
-* optionally calls Claude API
-* provides fallback responses
-
----
-
-## Presentation Layer
-
-Built using **Streamlit**
-
-Features:
-
-* Query input + sample queries
-* Claude toggle
-* Answer-first UI
-* Evidence display
-* Visual references
-* Debug panels
-
----
-
-## Project Structure
+##  Project Structure
 
 ```text
 prox-challenge/
-│
+├── .git/
+├── .gitignore
+├── .env
+├── README.md
+├── requirements.txt
 ├── app/
-│   ├── agent/
-│   │   ├── orchestrator.py        # main pipeline controller
-│   │   ├── query_router.py        # intent classification
-│   │   ├── response_planner.py    # chunk selection + structure
-│   │   ├── prompts.py             # LLM prompts
-│   │
-│   ├── ingestion/
-│   │   ├── parse_manual.py        # PDF parsing
-│   │   ├── chunk_manual.py        # chunking logic
-│   │   ├── extract_images.py      # image extraction
-│   │   ├── extract_tables.py      # table extraction
-│   │   ├── build_inventory.py     # metadata creation
-│   │
-│   ├── retrieval/
-│   │   ├── keyword_search.py      # keyword-based search
-│   │   ├── vector_store.py        # FAISS embeddings
-│   │   ├── hybrid_search.py       # combined ranking logic
-│   │   ├── metadata_filters.py
-│   │
-│   ├── vision/
-│   │   ├── figure_matcher.py      # image retrieval
-│   │   ├── image_analysis.py      # caption + enrichment
-│   │
-│   ├── renderers/
-│   │   ├── text_renderer.py
-│   │   ├── table_renderer.py
-│   │   ├── image_renderer.py
-│   │   ├── diagram_renderer.py
-│   │
-│   ├── main.py                   # Streamlit UI
+│   ├── __init__.py
 │   ├── config.py
+│   ├── main.py
 │   ├── schemas.py
-│
+│   ├── agent/
+│   │   ├── __init__.py
+│   │   ├── orchestrator.py
+│   │   ├── prompts.py
+│   │   ├── query_router.py
+│   │   └── response_planner.py
+│   ├── ingestion/
+│   │   ├── __init__.py
+│   │   ├── build_inventory.py
+│   │   ├── chunk_manual.py
+│   │   ├── extract_images.py
+│   │   ├── extract_tables.py
+│   │   └── parse_manual.py
+│   ├── renderers/
+│   │   ├── __init__.py
+│   │   ├── diagram_renderer.py
+│   │   ├── image_renderer.py
+│   │   ├── table_renderer.py
+│   │   └── text_renderer.py
+│   ├── retrieval/
+│   │   ├── __init__.py
+│   │   ├── hybrid_search.py
+│   │   ├── keyword_search.py
+│   │   ├── metadata_filters.py
+│   │   └── vector_store.py
+│   └── vision/
+│       ├── __init__.py
+│       ├── figure_matcher.py
+│       └── image_analysis.py
 ├── data/
 │   ├── indexes/
 │   │   ├── chunks.faiss
-│   │   ├── chunks_metadata.json
-│   │
-│   ├── processed/
-│   │   ├── chunks/
-│   │   ├── images/
-│   │   ├── images_manifest.json
-│   │   ├── pages/
-│   │   ├── tables/
-│
+│   │   └── chunks_metadata.json
+│   └── processed/
+│       ├── chunks/
+│       ├── images/
+│       ├── images_manifest.json
+│       ├── manual_inventory.json
+│       ├── pages/
+│       └── tables/
 ├── files/
-│   ├── owner-manual.pdf
-│   ├── quick-start-guide.pdf
-│   ├── selection-chart.pdf
-│
-├── tests/
-│   ├── smoke_test.py
-│   ├── eval_questions.json
-│
-├── requirements.txt
-├── README.md
-└── .env
+├── notes/
+├── proxy/
+├── product-inside.webp
+├── product.webp
+├── result1.png
+├── result2.png
+├── result3.png
+├── result4.png
+├── result5.png
+├── result6.png
+├── result7.png
+├── result8.png
+└── result9.png
+tests/
+    ├── eval_questions.json
+    └── smoke_test.py
 ```
 
 ---
 
-## Setup Instructions
+##  Workflow
 
-### 1. Clone repo
+###  Example 1: Specification Query
 
-```bash
-git clone <repo-url>
-cd prox-challenge
+**Input:**
+
+```
+duty cycle MIG 240V
 ```
 
+**Flow:**
+
+* • Routed to specification
+* • Retrieves duty cycle tables
+* • Returns structured table + explanation
+
 ---
 
-### 2. Create virtual environment
+### Example 2: Polarity Setup
 
-```bash
-python3 -m venv proxy
-source proxy/bin/activate
+**Input:**
+
+```
+polarity setup flux cored
 ```
 
----
+**Output:**
 
-### 3. Install dependencies
+* • Generated diagram
+* • Step-by-step instructions
+* • Grounded explanation
 
-```bash
-pip install -r requirements.txt
-```
-
----
-
-### 4. Add Claude API key
-
-Create `.env`:
-
-```text
-ANTHROPIC_API_KEY=your_api_key_here
-```
 
 ---
 
-### 5. Run Streamlit app
-
-```bash
-streamlit run app/main.py
-```
-
----
-
-## 🧪 Testing
-
-Run smoke tests:
-
-```bash
-python -m tests.smoke_test
-```
-
----
-
-## Example Queries
-
-* `duty cycle MIG 240V`
-* `polarity setup flux cored`
-* `front panel controls`
-* `wire spool installation`
-* `welder does not function troubleshooting`
-* `which process should I use for stainless steel`
-
----
-
-## Design Decisions
-
-### Why Hybrid Search?
-
-* Keyword ensures precision
-* Vector ensures semantic matching
-* Combined with boosting → robust ranking
-
----
-
-### Why Intent-Aware Routing?
-
-Without intent:
-
-* wrong chunk types dominate
-* output format becomes inconsistent
-
-With intent:
-
-* stable behavior
-* predictable outputs
-
----
-
-### Why Structured Planning?
-
-Separates:
-
-* **what to retrieve**
-* **how to answer**
-
-This makes the system:
-
-* explainable
-* debuggable
-* extensible
-
----
-
-### Why Vision Integration?
-
-Technical manuals rely heavily on:
-
-* diagrams
-* control panels
-* wiring visuals
-
-Text-only RAG is insufficient.
-
----
-## Result
-What the Agent Produces
-
-Our agent dynamically:
-- extracts structured tables from manuals
-- generates step-by-step procedures
-- synthesizes troubleshooting diagnostics
-
-Below are real outputs:
+## Screenshots
+Below are outputs in real-time:
 <img src="result1.png" alt="Vulcan OmniPro 220"/>
 <img src="result2.png" alt="Vulcan OmniPro 220"/>
 <img src="result3.png" alt="Vulcan OmniPro 220"/>
@@ -453,26 +371,144 @@ Below are real outputs:
 <img src="result8.png" alt="Vulcan OmniPro 220"/>
 <img src="result9.png" alt="Vulcan OmniPro 220"/>
 
+## ⚙️ Setup Instructions
+
+### 1. Clone Repo
+
+```bash
+git clone https://github.com/Gowtham-Pentela/prox-challenge.git
+cd prox-challenge
+```
+
+---
+
+### 2. Create Virtual Environment
+
+```bash
+python3 -m venv proxy
+source proxy/bin/activate
+```
+
+---
+
+### 3. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+### 4. Add API Key
+
+Create `.env` file:
+
+```bash
+ANTHROPIC_API_KEY=your_api_key
+```
+
+---
+
+### 5. Run Ingestion (if needed)
+
+```bash
+python -m app.ingestion.parse_manual
+```
+
+---
+
+### 6. Run Locally
+
+```bash
+PYTHONPATH=. streamlit run app/main.py
+```
+
+---
+
+## ☁️ Streamlit Deployment Notes
+
+### Required
+
+Add in Streamlit Secrets:
+
+```toml
+ANTHROPIC_API_KEY="your_key"
+```
+
+### Current Issue
+
+Without API key:
+
+* Claude synthesis fails
+* App falls back to raw renderer output
+
+---
+
+## Example Queries
+
+### Specifications
+
+* • duty cycle MIG 240V
+* • voltage range
+
+### Setup
+
+* • polarity setup flux cored
+* • wire spool installation
+
+### Controls
+
+* • front panel controls
+
+### Troubleshooting
+
+* • welder not working
+* • weld porosity causes
+
+### Image Queries
+
+* • Does this weld look correct?
+* • What defect is this?
+
+---
+
+##  Limitations
+
+* • Streamlit Cloud missing API key → degraded output
+* • Figure matching still heuristic-based
+* • Diagram rendering is ASCII (can be improved)
+
 ---
 
 ## Future Improvements
 
-* Better table rendering (true dataframe display)
-* More advanced image understanding (multimodal embeddings)
-* Feedback loop for ranking improvement
-* Streaming responses with Claude
-* Deployment (Docker + cloud)
+* • Stronger answer synthesis layer
+* • Better figure ranking
+* • Rich UI diagrams (SVG/interactive)
+* • Evaluation framework
+* • Improved multimodal reasoning
 
 ---
 
 ## Summary
 
-This project demonstrates:
+This project demonstrates a **multimodal reasoning agent** that:
 
-* End-to-end RAG system design
-* Hybrid retrieval with ranking optimization
-* Intent-aware reasoning
-* Multimodal integration (text + images)
-* Clean separation of concerns (router, planner, renderer)
+* • Understands both text and images
+* • Retrieves relevant manual content
+* • Decides the best way to present answers
+* • Produces structured, grounded responses
+
+It goes beyond simple RAG by combining:
+
+- • Retrieval + Planning + Rendering + Reasoning
+
+---
+
+## 👤 Author
+
+**Gowtham Pentela**
+
+GitHub: [https://github.com/Gowtham-Pentela](https://github.com/Gowtham-Pentela)
 
 ---
