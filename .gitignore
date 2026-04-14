@@ -3,5 +3,4 @@ proxy/
 __pycache__/
 *.pyc
 .env
-data/processed/
-data/indexes/
+proxy
