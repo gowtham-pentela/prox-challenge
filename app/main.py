@@ -1,14 +1,17 @@
 import os
+import sys
 import tempfile
 from pathlib import Path
 from typing import List
 
-import streamlit as st
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
 
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
+
+import streamlit as st
+
 from app.agent.orchestrator import Orchestrator
 
 
