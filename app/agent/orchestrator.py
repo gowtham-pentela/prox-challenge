@@ -2,10 +2,10 @@ import json
 import os
 from pathlib import Path
 from typing import Dict, Any
-
+from app.agent.answer_synthesizer import AnswerSynthesizer
 from anthropic import Anthropic
 from dotenv import load_dotenv
-
+from typing import Any, Dict
 from app.agent.prompts import build_system_prompt, build_user_prompt
 from app.agent.query_router import QueryRouter
 from app.agent.response_planner import ResponsePlanner
@@ -37,7 +37,7 @@ class AgentOrchestrator:
         self.planner = ResponsePlanner()
         self.figure_matcher = FigureMatcher()
         self.image_analysis = ImageAnalysis()
-
+        self.synthesizer = AnswerSynthesizer()
         self.anthropic_api_key = key
         self.client = Anthropic(api_key=self.anthropic_api_key) if self.anthropic_api_key else None
         print("Client created:", self.client is not None)
@@ -83,10 +83,12 @@ class AgentOrchestrator:
             "render_output": render_output,
         }
 
+   
+
     def generate_with_claude(
         self,
         pipeline_output: Dict[str, Any],
-        model: str = "claude-3-7-sonnet-20250219",
+        model: str = "claude-sonnet-4-6",
     ) -> str:
         if not self.client:
             raise ValueError("ANTHROPIC_API_KEY is not set. Claude generation is unavailable.")
@@ -106,17 +108,20 @@ class AgentOrchestrator:
             retrieved_chunks=retrieved_chunks,
         )
 
-        response = self.client.messages.create(
-            model=model,
-            max_tokens=1400,
-            system=system_prompt,
-            messages=[
-                {
-                    "role": "user",
-                    "content": user_prompt,
-                }
-            ],
-        )
+        try:
+            response = self.client.messages.create(
+                model=model,
+                max_tokens=1400,
+                system=system_prompt,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": user_prompt,
+                    }
+                ],
+            )
+        except Exception as e:
+            raise RuntimeError(f"Claude API call failed: {e}")
 
         parts = []
         for block in response.content:
@@ -165,80 +170,19 @@ class AgentOrchestrator:
         plan = pipeline_output["plan"]
         render_output = pipeline_output["render_output"]
         image_results = pipeline_output.get("image_results", [])
-        intent = plan.get("intent")
-        fmt = plan.get("format")
-        primary = plan.get("primary_chunk")
 
-        if not primary:
-            return "I could not find enough relevant manual context to answer this question."
+        answer = self.synthesizer.synthesize(plan, render_output)
 
-        section = primary.get("section_title", "Unknown Section")
-        page = primary.get("page_number", "N/A")
-
-        visual_note = ""
         if image_results:
-            visual_note = "\n\nRelevant visual references:\n" + "\n".join(
-                [
-                    f"- Page {img.get('page_number')} | {img.get('section_title')} | {img.get('path')}"
-                    for img in image_results
-                ]
-            )
-
-        if fmt == "step_by_step":
-            return (
-                f"Intent: {intent}\n"
-                f"Primary source: {section} (Page {page})\n\n"
-                f"{render_output['content']}"
-                f"{visual_note}"
-            )
-
-        if fmt == "table":
-            rows = render_output.get("content", [])
-            lines = [f"Intent: {intent}", f"Primary source: {section} (Page {page})", ""]
-            for row in rows:
-                lines.append(
-                    f"- {row['section_title']} | Page {row['page_number']} | "
-                    f"{row['content_type']}: {row['text_preview']}"
+            answer += "\n\n## Relevant visual references\n"
+            for img in image_results:
+                answer += (
+                    f"- Page {img.get('page_number')} | "
+                    f"{img.get('section_title') or 'Visual reference'} | "
+                    f"{img.get('path')}\n"
                 )
-            return "\n".join(lines) + visual_note
 
-        if fmt == "diagram":
-            diagram_content = json.dumps(
-                render_output.get("content", {}),
-                indent=2,
-                ensure_ascii=False,
-            )
-            return (
-                f"Intent: {intent}\n"
-                f"Primary source: {section} (Page {page})\n\n"
-                f"{diagram_content}"
-                f"{visual_note}"
-            )
-
-        if fmt == "image_plus_text":
-            content = render_output.get("content", [])
-            lines = [f"Intent: {intent}", f"Primary source: {section} (Page {page})", ""]
-            for block in content:
-                lines.append(
-                    f"- {block['section_title']} | Page {block['page_number']}: "
-                    f"{block['text_preview']}"
-                )
-            if image_results:
-                lines.append("")
-                lines.append("Relevant visual references:")
-                for img in image_results:
-                    lines.append(
-                        f"- Page {img.get('page_number')} | {img.get('section_title')} | {img.get('path')}"
-                    )
-            return "\n".join(lines)
-
-        return (
-            f"Intent: {intent}\n"
-            f"Primary source: {section} (Page {page})\n\n"
-            f"{render_output.get('content', '')}"
-            f"{visual_note}"
-        )
-
+        return answer
 
 def main():
     orchestrator = AgentOrchestrator()

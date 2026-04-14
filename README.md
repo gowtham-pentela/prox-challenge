@@ -435,7 +435,24 @@ Text-only RAG is insufficient.
 
 ---
 ## Result
-<img src="result.png" alt="Vulcan OmniPro 220" />
+What the Agent Produces
+
+Our agent dynamically:
+- extracts structured tables from manuals
+- generates step-by-step procedures
+- synthesizes troubleshooting diagnostics
+
+Below are real outputs:
+<img src="result1.png" alt="Vulcan OmniPro 220"/>
+<img src="result2.png" alt="Vulcan OmniPro 220"/>
+<img src="result3.png" alt="Vulcan OmniPro 220"/>
+<img src="result4.png" alt="Vulcan OmniPro 220"/>
+<img src="result5.png" alt="Vulcan OmniPro 220"/>
+<img src="result6.png" alt="Vulcan OmniPro 220"/>
+<img src="result7.png" alt="Vulcan OmniPro 220"/>
+<img src="result8.png" alt="Vulcan OmniPro 220"/>
+<img src="result9.png" alt="Vulcan OmniPro 220"/>
+
 ---
 
 ## Future Improvements
