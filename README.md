@@ -340,6 +340,11 @@ duty cycle MIG 240V
 *  Retrieves duty cycle tables
 *  Returns structured table + explanation
 
+**Result**
+<img src="ex1.png" alt="Vulcan OmniPro 220"/>
+<img src="ex12.png" alt="Vulcan OmniPro 220"/>
+<img src="ex13.png" alt="Vulcan OmniPro 220"/>
+
 ---
 
 ### Example 2: Polarity Setup
