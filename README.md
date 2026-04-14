@@ -341,6 +341,7 @@ duty cycle MIG 240V
 *  Returns structured table + explanation
 
 **Result**
+
 <img src="ex1.png" alt="Vulcan OmniPro 220"/>
 <img src="ex12.png" alt="Vulcan OmniPro 220"/>
 <img src="ex13.png" alt="Vulcan OmniPro 220"/>
@@ -361,6 +362,12 @@ polarity setup flux cored
 *  Step-by-step instructions
 *  Grounded explanation
 
+**Result**
+
+<img src="ex2.png" alt="Vulcan OmniPro 220"/>
+<img src="ex22.png" alt="Vulcan OmniPro 220"/>
+<img src="ex23.png" alt="Vulcan OmniPro 220"/>
+<img src="ex24.png" alt="Vulcan OmniPro 220"/>>
 
 ---
 
